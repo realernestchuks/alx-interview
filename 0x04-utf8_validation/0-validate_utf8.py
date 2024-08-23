@@ -1,23 +1,52 @@
 #!/usr/bin/python3
-"""UTF-8 Validation"""
+"""
+Define validUTF8(data) function that validates whether a
+string of ints represents a valid UTF-8 encoding.
+"""
+from itertools import takewhile
+
+
+def int_to_bits(nums):
+    """
+    Helper function
+    Convert ints to bits
+    """
+    for num in nums:
+        bits = []
+        mask = 1 << 8  # cause we have 8 bits per byte. adds up to (11111111)
+        while mask:
+            mask >>= 1
+            bits.append(bool(num & mask))
+        yield bits
 
 
 def validUTF8(data):
-        """method determines if given data set represents a valid UTF-8 encoding"""
-            num_bytes = 0
-                for num in data:
-                            binary_rep = format(num, '#010b')[-8:]
-                                    if num_bytes == 0:
-                                                    for bit in binary_rep:
-                                                                        if bit == '0':
-                                                                                                break
-                                                                                                            num_bytes += 1
-                                                                                                                        if num_bytes == 0:
-                                                                                                                                            continue
-                                                                                                                                                    if num_bytes == 1 or num_bytes > 4:
-                                                                                                                                                                        return False
-                                                                                                                                                                            else:
-                                                                                                                                                                                            if not (binary_rep[0] == '1' and binary_rep[1] == '0'):
-                                                                                                                                                                                                                return False
-                                                                                                                                                                                                                    num_bytes -= 1
-                                                                                                                                                                                                                        return num_bytes == 0
+    """
+    Takes a list of ints and returns true if the list is
+    a valid UTF-8 encoding, else returns false
+    Args:
+        data : List of ints representing possible UTF-8 encoding
+    Return:
+        bool : True or False
+    """
+    bits = int_to_bits(data)
+    for byte in bits:
+        # if single byte char, then valid. continue
+        if byte[0] == 0:
+            continue
+
+        # if here, byte is multi-byte char
+        ones = sum(takewhile(bool, byte))
+        if ones <= 1:
+            return False
+        if ones >= 4:  # UTF-8 can be 1 to 4 bytes long
+            return False
+
+        for _ in range(ones - 1):
+            try:
+                byte = next(bits)
+            except StopIteration:
+                return False
+            if byte[0:2] != [1, 0]:
+                return False
+    return True
